@@ -30,7 +30,7 @@ parser.add_argument('--email-recipient', type=str, default=None, help='Email add
 
 parser.add_argument('--n', type=int, default=0, help='number of tried private keys, setting n=0 will try keys forever')
 
-parser.add_argument('--send-test-mail', action='store_true', default=False)
+parser.add_argument('--send-test-mail', action='store_true', default=False, help="Test mail connection by sending test email")
 
 # generate n private keys sampled uniformly from [low, high]
 def generate(n=1, low=0, high=max_key):
