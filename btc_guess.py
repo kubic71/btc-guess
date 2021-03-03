@@ -1,4 +1,5 @@
 import random
+import smtplib
 import hashlib
 import argparse
 import binascii
@@ -22,7 +23,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--min-key', type=str, default="1", help='Lower bound of sampled range in hex')
 parser.add_argument('--max-key', type=str, default=pretty_hex(max_key), help='Upper bound of sampled range in hex')
 
+parser.add_argument('--sender-email', type=str, default="btc.guess@yandex.com", help='Email account from which notifications will be sent')
+parser.add_argument('--sender-email-password', type=str, default="Rc672r2M1L4W", help='Email account password')
+
+parser.add_argument('--email-recipient', type=str, default=None, help='Email address to which notifications will be sent')
+
 parser.add_argument('--n', type=int, default=0, help='number of tried private keys, setting n=0 will try keys forever')
+
+parser.add_argument('--send-test-mail', action='store_true', default=False)
 
 # generate n private keys sampled uniformly from [low, high]
 def generate(n=1, low=0, high=max_key):
@@ -216,14 +224,48 @@ def check_balance(address):
         if (blockchain_tags_json[i] == 'final_balance'): 
             return btc_tokens/SATOSHIS_PER_BTC
 
+class Email(object):
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+        self.server = 'smtp.yandex.com'
+        self.port = 587
+        session = smtplib.SMTP(self.server, self.port)        
+        session.ehlo()
+        session.starttls()
+        session.ehlo
+        session.login(self.email, self.password)
+        self.session = session
+
+    def send_message(self, subject, body, send_to):
+        headers = [
+            "From: " + self.email,
+            "Subject: " + subject,
+            "To: " + send_to,
+            "MIME-Version: 1.0",
+           "Content-Type: text/plain"]
+        headers = "\r\n".join(headers)
+        self.session.sendmail(
+            self.email,
+            send_to,
+            headers + "\r\n\r\n" + body)
+
+
+def send_email(email_account, password, send_to, content):
+    gm = Email(email_account, password)
+    gm.send_message('private key with balance discovered', content, send_to)
 
 def get_timestamp():
     # dd/mm/YY H:M:S
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-
 if __name__ == "__main__":
     args = parser.parse_args()
+
+    if args.send_test_mail:
+        print(f"Sending test email from {args.sender_email} to {args.email_recipient}")
+        send_email(args.sender_email, args.sender_email_password, args.email_recipient, "This is only test email, no private key here.")
+        sys.exit(0)
 
     f = open("keys_with_balance.txt", "a")
 
@@ -244,6 +286,10 @@ if __name__ == "__main__":
                 f.write(msg)
                 f.write("\n\n")
                 f.flush()
+
+                # if email address has been specified, recipient will get a notification
+                if args.email_recipient is not None:
+                    send_email(args.sender_email, args.sender_email_password, args.email_recipient, msg)
 
             print("\n")
 
